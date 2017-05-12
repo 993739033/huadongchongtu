@@ -34,6 +34,8 @@ public class MyViewPage extends LinearLayout {
         super.onFinishInflate();
         mscroller = new Scroller(getContext());
         smoothScrollTo(2000,0);
+        myVelocity=VelocityTracker.obtain();
+
     }
 
     @Override
@@ -67,7 +69,7 @@ public class MyViewPage extends LinearLayout {
     private void smoothScrollTo(int destx,int desty){
       int x=getScrollX();
         int delta =destx-x;
-        mscroller.startScroll(x,0,delta,0,5000);
+//        mscroller.startScroll(x,0,delta,0,5000);
         invalidate();
     }
 
@@ -75,6 +77,7 @@ public class MyViewPage extends LinearLayout {
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                index = (getScrollX() + childWidth / 2) / childWidth;
                 oldX=ev.getRawX();
                 oldY=ev.getRawY();
                 if (!mscroller.isFinished()) {
@@ -96,17 +99,18 @@ public class MyViewPage extends LinearLayout {
         }
         return false;
     }
-    private  float oldX=0,oldY=0;
+    private  float oldX=0,oldY=0,velocityX=0;
     private int index=0;
     private  VelocityTracker myVelocity;
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float deltaX;
+        myVelocity.addMovement(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
-                index =getScrollX()/childWidth;
+
                float x=event.getRawX();
-               deltaX= (oldX-x);
+                deltaX= (oldX-x);
                 oldX=x;
                 int newDis = (int) (getScrollX() +deltaX);
                 if (deltaX<0){
@@ -114,13 +118,19 @@ public class MyViewPage extends LinearLayout {
                 }else{
                     newDis = Math.min((getChildCount()-1) * childWidth, newDis);
                 }
-                scrollTo(newDis, 0);
+                scrollBy(newDis-getScrollX(), 0);
+
                 break;
             case MotionEvent.ACTION_UP:
-
-                if (getScrollX()%childWidth>childWidth/2){
-                    index+=1;
+                myVelocity.computeCurrentVelocity(1000);
+                velocityX =  myVelocity.getXVelocity();
+                myVelocity.clear();
+                if (Math.abs(velocityX) > 50) {
+                    index=velocityX>0?index-1:index+1;
+                } else {
+                    index= (getScrollX()+childWidth/2)/childWidth;
                 }
+                index = Math.max(Math.min(index, getChildCount() - 1), 0);
                 int del=index*childWidth-getScrollX();
                 mscroller.startScroll(getScrollX(),0,del,0,400);
                 invalidate();
@@ -128,12 +138,5 @@ public class MyViewPage extends LinearLayout {
         }
         return true;
     }
-    private void cancelTracker(){
-        myVelocity.clear();
-        myVelocity.recycle();
-    }
-    private float getVelocity(){
-        myVelocity.computeCurrentVelocity(10);
-        return myVelocity.getXVelocity();
-    }
+
 }
